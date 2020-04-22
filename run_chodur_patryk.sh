@@ -7,11 +7,11 @@ if [[ $# -ne 1 ]]; then
 fi
 # this script should only work above cloned repositories
 if [ -d .git ]; then
-	if [ -d ../run_chodur_patryk.sh ]; then
+	if ! [ -d ../run_chodur_patryk.sh ]; then
 		cp run_chodur_patryk.sh ..
 	fi
 	cd ..
-	echo "Info: this script is meant to be used above cloned directory"
+	echo "Info: this script is meant to use above cloned directory"
 fi
 
 if [ $1 = "clone" ]; then
