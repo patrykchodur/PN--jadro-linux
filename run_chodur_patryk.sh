@@ -29,7 +29,7 @@ fi
 
 if [ $1 = "update" ]; then
 	echo "Info: updating run_chodur_patryk.sh"
-	wget https://raw.githubusercontent.com/patrykchodur/PN--jadro-linux/master/run_chodur_patryk.sh -o run_chodur_patryk_tmp.sh
+	wget https://raw.githubusercontent.com/patrykchodur/PN--jadro-linux/master/run_chodur_patryk.sh -o /dev/null -O run_chodur_patryk_tmp.sh
 	chmod 755 run_chodur_patryk_tmp.sh
 	mv run_chodur_patryk_tmp.sh run_chodur_patryk.sh
 fi
