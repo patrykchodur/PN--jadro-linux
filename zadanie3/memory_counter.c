@@ -35,7 +35,9 @@ void sbrk_used(int size) {
 }
 
 static size_t actual_mmap_size(size_t len) {
-	static page_size = sysconf(_SC_PAGESIZE);
+	static size_t page_size = 0;
+	if (!page_size)
+		page_size = sysconf(_SC_PAGESIZE);
 	size_t page_count = 1 + ((len - 1) / page_size);
 	len = page_count * page_size;
 	return len;

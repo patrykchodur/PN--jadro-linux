@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-#include "my_malloc.h"
+#include "memory_counter.h"
 #include <stdlib.h>
 
 #define TEST_SIZE 10000
@@ -8,7 +8,13 @@
 #define MALLOC my_malloc
 #define FREE my_free
 
+void* my_malloc(size_t);
+void my_free(void*);
+
+
 int main(void) {
+	init_counter();
+
 	char* test = MALLOC(20);
 	strcpy(test, "test_string");
 	puts(test);

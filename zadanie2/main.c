@@ -4,6 +4,7 @@
 // intptr_t jest tu po to, aby nie dodawać niepotrzebnego
 // debugowania w przypadku dziwact związanych z konwersjami
 
+// funkcje do napisania
 intptr_t max_value(intptr_t* tab, int size);
 intptr_t sum(intptr_t* tab, int size);
 
