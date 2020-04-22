@@ -19,6 +19,7 @@ static void display_info_at_exit(void) {
 
 void init_counter(void) {
 	brk_value_beginning = sbrk(0);
+	brk_value_highest = brk_value_beginning;
 	atexit(display_info_at_exit);
 }
 
