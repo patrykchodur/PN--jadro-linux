@@ -7,7 +7,7 @@ a.out: handler.s # main.s
 	# gcc -S main.c
 
 handler.s:
-	gcc -S handler.c
+	gcc -S zad1.c -o handler.s
 
 clean:
 	rm -f handler.s a.out
