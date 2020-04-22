@@ -10,7 +10,7 @@ fi
 
 if [ $1 = "clean" ]; then
 	if [ -d .git ]; then
-		git list-files
+		rm -rf zadanie1 zadanie2 zadanie3 .git README.md .gitignore
 	elif [ -d PN--jadro-linux ]; then
 		echo "cleaning"
 		rm -rf PN--jadro-linux
