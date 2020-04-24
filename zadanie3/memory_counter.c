@@ -10,7 +10,7 @@ static size_t mmap_highest;
 static size_t mmap_current;
 
 static void display_info_at_exit(void) {
-	printf("Maksymalne zużycie pamięci:\n"
+	printf("Max memory usage:\n"
 			"brk: %ld\n"
 			"mmap: %ld\n",
 			brk_value_highest - brk_value_beginning,
