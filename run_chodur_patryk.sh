@@ -32,8 +32,16 @@ function print_progress {
 
 function print_progress_finished {
 	echo "  Done!"
-
 }
+
+function user_aborted {
+	echo
+	print_error "User aborted"
+	exit -1
+}
+
+trap user_aborted SIGINT
+trap user_aborted SIGTERM
 
 function download_script {
 	curl -s $script_link > $1
