@@ -1,14 +1,16 @@
 # Patryk Chodur - Jądro systemu na przykładzie Linux
 
-Repozytorium to jest projektem na przedmiot *programowanie niskopoziomowe* 
+Repozytorium to jest projektem na przedmiot **programowanie niskopoziomowe**,
 zawierającym przygotowane zadania z tego tematu.
 
-Zadania te są projektowane pod dowolny 64-bitowy system operacyjny oparty na jądrze Linux.
-
-Planuję w ciągu 1 - 2 dni rozszerzyć informacje tu zawarte o opcjonalne wskazówki,
-bądź inne informacje pomocne w rozwiązywaniu zadań.
+Zadania te są projektowane pod dowolny 64-bitowy system operacyjny oparty na jądrze Linux,
+choć rozwiązanie drugiego i trzeciego powinno być przenośne na dowolny system zgodny z POSIX.
 
 ## Zadania
+
+Projekt składa się z 3 zadań, które należy rozwiązać uzupełniając pliki zad1.c,
+zad2.c oraz zad3.c. Do zadań dołączone są bardzo proste pliki Makefile, które można
+edytować (np. aby dodać plik źródłowy).
 
 ### 1. Sygnały, handlery i stos
 
@@ -23,7 +25,7 @@ za pomocą funkcji `signal()` (prostsza) lub `sigaction()` (dająca
 więcej możliwości).
 
 Handler ten powinien umożliwić poprawne zamknięcie programu, a także
-użyć `free()` na `global_res` i `local_res`. Program można zakończyć
+użycie `free()` na `global_res` i `local_res`. Program można zakończyć
 w handlerze, jednakże proszę używać `_exit()` zamiast `exit()`.
 Zainteresowanych zachęcam do poczytania na temat różnic.
 
@@ -34,24 +36,83 @@ wymaga znacznie więcej kombinowania, dlatego nie jest wymagane.
 Można tego dokonać na 2 sposoby. Znajdując pozycję `local_res` na stosie,
 lub umożliwiając wykonanie `free()` z końca funkcji `main()`. W obu przypadkach
 konieczne jest ustalenie kodu asemblera na którym pracujemy, dlatego do kompilacji
-należy używać pliku main.s, a nie main.c. Jeśli chcemy znaleść `local_res` na stosie
-to należy zauważyć, że `rbp` na samym początku wywołania naszego handlera
-ma taką samą wartość jak przez całą funkcję main. Najprościej więc napisać handler
-w asemblerze, jednakże da się to zrobić także w `C`.
+używany jest plik main.s, a nie main.c.
 
-Drugie rozwiązanie zakłada użycie `sigaction()` zamiast `signal()`, abyśmy
-w handlerze dostali wskaźnik na `ucontext`, w którym znajduje się `mcontext`.
-Możemy za pomocą ostatniego dostać się do rejestrów sprzed context switcha
-dokonanego przed w momencie przekazania sterowania do handlera. Nas interesuje
-rejestr `rip`. Postaram się to jeszcze dokładniej opsiać w ciągu najbliższych dni.
+#### Pierwszy sposób
+
+Jeśli chcemy znaleść `local_res` na stosie, to należy zauważyć, że `rbp` na samym
+początku wywołania naszego handlera ma taką samą wartość jak przez całą funkcję main.
+Jest to spowodowane tym, że kernel Linuxa podczas context switcha przed wpuszczeniem
+nas do handlera zmienił `rsp` na stos do obsługi handlerów, jednakże nie zmienił `rbp`.
+Najprościej więc napisać handler asemblerze, jednakże da się to zrobić także w `C`.
+
+##### W assemblerze
+
+Jeśli piszemy handler w assemblerze, to najprościej stworzyć osobny plik zawierający
+sam tylko handler. W przypadku inline assembly musimy się liczyć z tym, że nasz
+kompilator mógł dokonać zmiany ramki stosu, więc nasz aktualny `rbp` wskazuje na
+inny adres niż `rbp` w funkcji `main()`. W funkcji `main()` widzimy wywołanie
+funkcji `malloc()` z biblioteki standardowej `C`. Następna linijka to przekopiowanie
+rezultatu do miejsca na stosie, w którym trzymana jest zmienna `local_res`. Bardzo
+łatwo jest więc przekopiować wartość spod tego adresu i wywołać funkcję `free()`. Aby 
+użyć funkcji z `C` w asemblerze wystarczy zadeklarować funkcję jako zewnętrzny symbol
+(`extern free` w NASM, w przypadku GAS każdy nieznany symbol jest traktowany jako
+zewnętrzny, więc nie trzeba tego robić). Finalnie kompilujemy plik za pomocą `gcc`, 
+więc biblioteka standardowa C będzie zlinkowana. Po pierwszych labolatoriach każdy 
+powinien wiedzieć jak korzystać z funkcji z asemblera w `C`, ale przypomnę, że 
+należy nazwę funkcji zadeklarować jako symbol globalny (`global` w NASM, `.globl` w GAS).
+
+##### W C
+
+Aby wykonać to zadanie w `C` należy rozumieć jak kompilator przekłada kod napisany
+w `C` do asemblera. Sugeruję, aby robić to zadanie z wyłączonymi optymalizacjami.
+Wtedy jeśli w handlerze zadeklarujemy zmienną 64-bitową, to tuż za nią znajdziemy
+wartość `rbp` z funkcji `main()`, umieszczony tam podczas zmiany ramki stosu.
+Rozwiązanie to wymaga dosyć agresywnego rzutowania, które w `C++` dokonywalibyśmy 
+za pomocą `reinterpret_cast`. Zależnie jak zapiszemy logikę będziemy się przesuwać
+o 1, albo o 8.
+
+#### Drugi sposób
+
+Zauważmy, że jeśli zwyczajnie opuścimy nasz handler, to procesor próbuje na nowo
+wykonać instrukję, która doprowadziła do naruszenia ochrony pamięci. Zmiana następnej
+instrukcji po wyściu z handlera powinna więc umożliwić prawidłowe wywołanie obu `free()`
+i poprawne wyjście z programu. Gdy spojrzymy do kodu asemblera (właściwie do main.c także)
+zauważymy, że rezultat instrukcji, która wywołała `SIGSEGV` nie jest nam w ogóle potrzebny.
+Nic się więc nie stanie, jeśli pominiemy tę instrukcję.
+
+Drugie rozwiązanie zakłada użycie `sigaction()` zamiast `signal()`. Gdy zajrzymy
+do manuala, zobaczymy że nasz handler powinien przyjmować 3 argumenty. Interesuje
+nas tutaj najbardziej ostatni, czyli `void* ucontext`. Manual odsyła nas do strony
+`getcontext(3)`. Struktura `ucontext_t` zawiera w sobie inną strukturę - `mcontext_t`,
+która nie jest już opisana, poza informacją, że zawiera rejestry (w tym `rip`).
+
+Jako, że struktura ta musi być gdzieś opisana logicznym posunięciem zdaje się udanie
+do źródła, czyli biblioteki standardowej
+[glibc](https://code.woboq.org/userspace/glibc/sysdeps/unix/sysv/linux/x86/sys/ucontext.h.html).
+Zobaczymy tutaj, że struktura ta zawiera wszystkie rejestry procesora, w tym `rip`.
+
+W dowolnym deasemblerze, na przykład tym w gdb, możemy bardzo łatwo zobaczyć ile
+zajmuje dowolna instrukcja. W tym przypadku możemy przesunąć `rip` o 2 lub 5, ale
+piszę tylko po to, aby nie zniechęciła nikogo nieznajomość obsługi debuggera. Polecam
+więc każdemu sprawdzić samemu, a także zobaczyć dlaczego podałem 2 wartości.
+
+Aby korzystać z wyżej wymienionych funkcjonalności glibc należy zdefiniować
+`_GNU_SOURCE` na początku programu (za pomocą `#define`).
 
 ### 2. Wielowątkowość
 
 Jest to proste zadanie z wielowątkowości, ktorego celem jest nauczenie podstaw
-korzystania z wątków POSIX. Należy napisać funkcje `max_value()` oraz `sum()`,
-które rekurencyjnie dzielą tablicę na 2 części, a jeśli tablica ma długość
-2, bądź mniejszą, dokonują odpowiednich operacji. I tak dla `sum()` należy zsumować
-dwa wywołania rekurencyjne uruchomione na 2 różnych wątkach.
+korzystania z wątków POSIX. Należy napisać funkcje `max_value()`, `sum()` a także
+funkcje pomocnicze, za pomocą których rekurencyjnie dzieląc tablicę na 2 części
+znajdziemy największą wartość, a także obliczymy sumę wszystkich elementów tablicy.
+Teoretycznie można to zadanie wykonać za pomocą `va_list`, jednakże najprościej
+stworzyć lokalne struktury przechowujące parametry kolejnych wywołań, i przekazywać
+wskaźniki do nich rzutowane na `void*`. Funkcję w nowym wątku wywołujemy za pomocą
+`pthread_create`, a wyniki otrzymujemy za pomocą `pthread_join`, które bardzo dokładnie
+opisane są w manualu. Tablica przechowuje zmienne całkowite o rozmiarze wskaźnika aby
+oszczędzić debugowanie możliwych konwersji. Za warunek kończący rekurencję można uznać
+rozmiar tablicy mniejszy bądź równy 2.
 
 ### 3. Malloc
 
