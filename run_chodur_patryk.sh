@@ -174,7 +174,7 @@ fi
 
 
 if [ $1 = "solution" ]; then
-	if [ -v $solution_link ]; then
+	if [ -z "$solution_link" ]; then
 		print_error "solution subcommand not allowed"
 		exit -1
 	fi
