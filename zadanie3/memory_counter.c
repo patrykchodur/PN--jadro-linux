@@ -19,20 +19,32 @@ static void display_info_at_exit(void) {
 
 void init_counter(void) {
 	brk_value_beginning = sbrk(0);
+	brk_current = brk_value_beginning;
 	brk_value_highest = brk_value_beginning;
 	atexit(display_info_at_exit);
 }
 
+static void update_max(void) {
+	size_t current_size = mmap_current;
+	current_size += brk_current - brk_value_beginning;
+
+	size_t highest_size = mmap_highest;
+	highest_size += brk_value_highest - brk_value_beginning;
+
+	if (current_size > highest_size) {
+		mmap_highest = mmap_current;
+		brk_value_highest = brk_current;
+	}
+}
+
 void brk_used(const void *ptr) {
 	brk_current = (char*)ptr;
-	if (brk_current > brk_value_highest)
-		brk_value_highest = brk_current;
+	update_max();
 }
 
 void sbrk_used(int size) {
 	brk_current += size;
-	if (brk_current > brk_value_highest)
-		brk_value_highest = brk_current;
+	update_max();
 }
 
 static size_t actual_mmap_size(size_t len) {
@@ -46,8 +58,7 @@ static size_t actual_mmap_size(size_t len) {
 
 void mmap_used(size_t len) {
 	mmap_current += actual_mmap_size(len);
-	if (mmap_current > mmap_highest)
-		mmap_highest = mmap_current;
+	update_max();
 }
 
 void munmap_used(size_t len) {
