@@ -216,9 +216,14 @@ if [ $1 = "solution" ]; then
 
 	if ! inside_docker; then
 		print_info "Running docker"
-		sed '$ a \
-		CMD ["ls"] \
-		' PN--jadro-linux/Dockerfile | docker build - -t patrykchodur:1.0
+		# niestety parser dockera to jest porażka i nie potrafi czytać ze strumieni
+		#sed '$ a\
+			#ENTRYPOINT ["./run_chodur_patryk.sh", "solution"]\
+			#' PN--jadro-linux/Dockerfile | docker build -t patrykchodur:1.0 -
+		cp PN--jadro-linux/Dockerfile Dockerfiletmp
+		echo 'ENTRYPOINT ["./run_chodur_patryk.sh", "solution"]' >> Dockerfiletmp
+		docker build -t patrykchodur:1.0 -f ./Dockerfiletmp .
+		rm Dockerfiletmp
 		docker run -it --rm=true  patrykchodur:1.0
 		exit $?
 	else
