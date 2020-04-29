@@ -6,6 +6,13 @@ zawierającym przygotowane zadania z tego tematu.
 Zadania te są projektowane pod dowolny 64-bitowy system operacyjny oparty na jądrze Linux,
 choć rozwiązanie drugiego i trzeciego powinno być przenośne na dowolny system zgodny z POSIX.
 
+Aby ściągnąć repozytorium można użyć polecenia
+`curl -S https://raw.githubusercontent.com/patrykchodur/PN--jadro-linux/master/run_chodur_patryk.sh > run_chodur_patryk.sh && chmod 755 run_chodur_patryk.sh && ./run_chodur_patryk.sh clone`
+
+Po wykonaniu polecenia `./run_chodur_patryk.sh run` uruchomi nam się `docker`,
+jednakże polecam wykorzystać do napisania tych zadań taurusa, gdyż jest to bardziej
+wygodne.
+
 ## Zadania
 
 Projekt składa się z 3 zadań, które należy rozwiązać uzupełniając pliki zad1.c,
@@ -23,6 +30,8 @@ którą należy zaimplementować. Powinna ona rejestrować handler dla
 `SIGSEGV`, który także trzeba napisać. Handler można zarejestrować
 za pomocą funkcji `signal()` (prostsza) lub `sigaction()` (dająca
 więcej możliwości).
+
+[Prezentacja - sygnały i handlery](https://youtu.be/R1jmbzWdpAU?t=1996)
 
 Handler ten powinien umożliwić poprawne zamknięcie programu, a także
 użycie `free()` na `global_res` i `local_res`. Program można zakończyć
@@ -114,6 +123,8 @@ opisane są w manualu. Tablica przechowuje zmienne całkowite o rozmiarze wskaź
 oszczędzić debugowanie możliwych konwersji. Za warunek kończący rekurencję można uznać
 rozmiar tablicy mniejszy bądź równy 2.
 
+[Prezentacja - wątki POSIX](https://youtu.be/R1jmbzWdpAU?t=1402)
+
 ### 3. Malloc
 
 Zadanie to polega na napisaniu prostego menedżera pamięci. Implementujemy
@@ -123,6 +134,36 @@ należy tuż po użyciu tych funkcji wywołać `mmap_used()`, `munmap_used()`,
 `brk_used()` oraz `sbrk_used()`. Dwie pierwsze funkcje przyjmują rozmiar blocku
 pamięci podany do odpowiednio `mmap()` oraz `munmap()`, a pozostałe przyjmują
 dokładnie takie same argumenty jak `brk()` i `sbrk()`.
+
+Aby rozdystrybuować pamięć w ramach działania funkcji `my_malloc()` najpierw musimy dostać
+od systemu większy blok pamięci. Tak jak opisałem to wcześniej, można do tego użyć funkcji
+POSIXowych `brk()`, `sbrk()`, czy `mmap()`. Funkcje te są najczęściej zwykłymi wrapperami
+na około wywołań systemowych. Biblioteka standardowa glibc na Linuxie w implementacji `malloc()`
+korzysta z funkcji `brk()` i `sbrk()`, jednakże funkcje te zostały usunięte w standardzie
+POSIX.1-2001 i obecnie uznawane są za przestarzałe. Z tego powodu sugeruję, aby wykorzystać
+`mmap()`, którego przykład użycia znajdziecie w [prezentacji](https://youtu.be/R1jmbzWdpAU?t=847).
+Należy użyć `MAP_ANONYMOUS` (blok niepowiązany żadnym plikiem) oraz `MAP_SHARED` (pamięć
+współdzielona pomiędzy procesami).
+
+Sugeruję, aby na początku napisać system do otrzymywania (i zwalniania) bloków pamięci z `mmap()`.
+System ten musi być w stanie ustalić rozmiar danego bloku pamięci, dlatego można
+stworzyć strukturę do trzymania takich danych. Dobrym pomysłem jest wykorzystanie
+funkcji `atexit()`, aby mieć pewność, że użyliśmy `munmap()` na wszystkich trzymanych
+blokach. System ten mógłby być wykorzystywany przez bardziej szczegółowy alokator, który
+przydziela mniejsze obszary pamięci. 
+
+Gdy otrzymamy już blok pamięci musimy go podzielić na mniejsze, aby nie przydzielać niepotrzebnie
+dużych bloków, gdy potrzebne jest nam na przykład 16 bajtów. Istnieje wiele schematów zarządzania 
+pamięcią, są one po krótce opisane w artykule na 
+[wikipedii](https://pl.wikipedia.org/wiki/Zarządzanie_pamięcią) oraz w prezentacji 
+kolegi z drugiej grupy [slab allocator i buddy system](https://youtu.be/9qwW-VgKIz0?t=1466).
+Do buddy system można wykorzystać drzewo binarne, które sprawdza, czy jakiś rodzic,
+bądź potomek, danego obszaru został już zaalokowany (1), czy nie (0).
+
+Zaimplementowane przez nas `my_free()` powinno dawać informację alokatorowi,
+że dany obszar pamięci może zostać ponownie przydzielony. Musimy być więc w stanie
+określić dany blok pamięci na postawie jego adresu, a także zapisać informację,
+że jest wolny.
 
 
 ## Materiały
