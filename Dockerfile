@@ -1,10 +1,9 @@
 FROM debian:10
 
 RUN apt-get update -y
-RUN apt-get install -y nasm vim gcc g++ nano man-db
+RUN apt-get install -y nasm vim gcc g++ nano man-db make
 
-COPY PN--jadro-linux* /home/root/
-COPY run_chodur_patryk.sh /home/root/
+COPY . /home/root/
 
 WORKDIR /home/root
 RUN find /home/root -name '*.sh' | xargs chmod 755

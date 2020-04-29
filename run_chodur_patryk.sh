@@ -99,6 +99,14 @@ function print_usage {
 	print_info  "Usage  ./run_chodur_patryk.sh clone|clean|run|update"
 }
 
+function inside_docker {
+	if [ -f /.dockerenv ]; then
+		return 0
+	else
+		return -1
+	fi
+}
+
 if [[ $# -ne 1 ]]; then
 	print_error "Wrong number of arguments"
 	print_usage
@@ -135,6 +143,12 @@ if [ $1 = "clean" ]; then
 		rm -rf PN--jadro-linux-rozwiazanie
 		something_cleaned=true
 	fi
+
+	docker ps -a -q -f status=exited | xargs docker rm
+	docker rmi patrykchodur:1.0
+	docker rmi debian:10
+
+
 	if [ "$something_cleaned" = false ]; then
 		print_info "Nothing to clean"
 	fi
@@ -142,7 +156,18 @@ if [ $1 = "clean" ]; then
 fi
 
 if [ $1 = "run" ]; then
-	print_info "run subcommand does not do anything"
+	if ! [ -d PN--jadro-linux ]; then
+		print_error "No repository found"
+		exit -1
+	fi
+	inside_docker
+	if [ $? -eq 0 ]; then
+		print_error "Already running inside docker"
+		exit -1
+	fi
+	print_info "Running docker"
+	docker build -t patrykchodur:1.0 -f ./PN--jadro-linux/Dockerfile .
+	docker run -it --rm=true patrykchodur:1.0
 	exit 0
 fi
 
@@ -189,29 +214,40 @@ if [ $1 = "solution" ]; then
 		exit -1
 	fi
 
-	# copying sollutions
-	print_info "Copying files"
-	print_progress_begin
+	if ! inside_docker; then
+		print_info "Running docker"
+		sed '$ a \
+		CMD ["ls"] \
+		' PN--jadro-linux/Dockerfile | docker build - -t patrykchodur:1.0
+		docker run -it --rm=true  patrykchodur:1.0
+		exit $?
+	else
 
-	cp PN--jadro-linux-rozwiazanie/solutions/zadanie1/* PN--jadro-linux/zadanie1/
-	print_progress
-	cp PN--jadro-linux-rozwiazanie/solutions/zadanie2/* PN--jadro-linux/zadanie2/
-	print_progress
-	cp PN--jadro-linux-rozwiazanie/solutions/zadanie3/* PN--jadro-linux/zadanie3/
-	print_progress
-	# copying testing scripts
-	cp PN--jadro-linux-rozwiazanie/test_scripts/zadanie1/* PN--jadro-linux/zadanie1/
-	print_progress
-	cp PN--jadro-linux-rozwiazanie/test_scripts/zadanie2/* PN--jadro-linux/zadanie2/
-	print_progress
-	cp PN--jadro-linux-rozwiazanie/test_scripts/zadanie3/* PN--jadro-linux/zadanie3/
-	print_progress_finished
-	# run testing scripts
-	( cd PN--jadro-linux/zadanie1 && ./test1.sh )
-	( cd PN--jadro-linux/zadanie2 && ./test2.sh )
-	( cd PN--jadro-linux/zadanie3 && ./test3.sh )
+		# copying sollutions
+		print_info "Copying files"
+		print_progress_begin
 
-	print_info "Source files for solutions are provided in solutions/ directory"
+		cp PN--jadro-linux-rozwiazanie/solutions/zadanie1/* PN--jadro-linux/zadanie1/
+		print_progress
+		cp PN--jadro-linux-rozwiazanie/solutions/zadanie2/* PN--jadro-linux/zadanie2/
+		print_progress
+		cp PN--jadro-linux-rozwiazanie/solutions/zadanie3/* PN--jadro-linux/zadanie3/
+		print_progress
+		# copying testing scripts
+		cp PN--jadro-linux-rozwiazanie/test_scripts/zadanie1/* PN--jadro-linux/zadanie1/
+		print_progress
+		cp PN--jadro-linux-rozwiazanie/test_scripts/zadanie2/* PN--jadro-linux/zadanie2/
+		print_progress
+		cp PN--jadro-linux-rozwiazanie/test_scripts/zadanie3/* PN--jadro-linux/zadanie3/
+		print_progress_finished
+		# run testing scripts
+		( cd PN--jadro-linux/zadanie1 && ./test1.sh )
+		( cd PN--jadro-linux/zadanie2 && ./test2.sh )
+		( cd PN--jadro-linux/zadanie3 && ./test3.sh )
+
+		print_info "Source files for solutions are provided in solutions/ directory"
+
+	fi
 	
 	exit 0
 fi
