@@ -185,3 +185,22 @@ Do rozwiązania zadań powinna wystarczyć wiedza z manualla.
 - [brk/sbrk](http://man7.org/linux/man-pages/man2/brk.2.html)
 
 
+## Errata
+
+- Choć standard **C** nie mówi nic o procesach (z tego co przeglądałem draft) to
+  `malloc()` w bibliotece glibc, gdy korzysta z `mmap()` 
+  ([M\_MMAP\_THRESHOLD](https://www.gnu.org/software/libc/manual/html_node/Malloc-Tunable-Parameters.html)),
+  używa `MAP_PRIVATE` zamiast `MAP_SHARED`, więc można użyć `MAP_PRIVATE`
+  (nie ma to wpływu na rozwiązanie).
+
+- Zapomniałem dodać, że `malloc()` powinien zwracać pamięć [wyrównaną](https://en.cppreference.com/w/c/language/object#Alignment)
+  dla typu o największych wymaganiach wyrównania. Przykładowo w architekturze x64 adres
+  32-bitowego integera powinien być wielokrotnością 4, chara 1, a wskaźnika,
+  czy 64-bitowego integera 8. `malloc()` musi więc zwracać adres będący wielokrotnością
+  ósemki. Przenośnym sposobem na określenie wymagań `malloc()` jest użycie operatora `_Alignof()`
+  z argumentem [max\_align\_t](https://en.cppreference.com/w/c/types/max_align_t).
+  Instnieje specjalne macro, zdefiniowane w `stdalign.h`, które pozwala używać tego
+  operatora jako `alignof()`. Osobne macro jest konieczne, gdyż `_Alignof()` został dodany
+  w **C11**, ale identyfikator `alignof` nie był
+  [zarezerwowany](https://en.cppreference.com/w/c/language/identifier#Reserved_identifiers).
+
