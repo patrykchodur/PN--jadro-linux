@@ -133,6 +133,12 @@ function using_docker {
 		return 1
 	fi
 
+	if ! command_exists docker ; then
+		print_warning "You do not have docker installed"
+		touch .dontusedocker
+		return 1
+	fi
+
 	# check if dependencies are available
 	if ! { command_exists curl && command_exists gcc ; }; then
 		touch .usedocker
