@@ -30,6 +30,19 @@ function print_progress {
 	printf "#"
 }
 
+function print_prompt {
+	echo -e "\033[36mPROMPT: $1 (y/n)\033[0m"
+	proper_answer=false
+	while true; do
+		read
+		if [ "$REPLY" != "${REPLY#[yY]}" ]; then
+			return 0
+		elif [ "$REPLY" != "${REPLY#[nN]}" ]; then
+			return 1
+		fi
+	done
+}
+
 function print_progress_finished {
 	echo "  Done!"
 }
@@ -107,6 +120,38 @@ function inside_docker {
 	fi
 }
 
+function command_exists {
+	command -v $1 2>&1 > /dev/null
+	return $?
+}
+
+function using_docker {
+	# checking for files
+	if [ -f .usedocker ]; then
+		return 0
+	elif [ -f .dontusedocker ]; then
+		return 1
+	fi
+
+	# check if dependencies are available
+	if ! { command_exists curl && command_exists gcc ; }; then
+		touch .usedocker
+		return 0
+	fi
+	if command_exists nasm ; then
+		print_prompt "Do you wish to use docker? All dependencies are available"
+	else
+		print_prompt "Do you wish to use docker? All required dependencies are available, but optional nasm is not installed (nasm can be used in ex1)"
+	fi
+	if [ $? -eq 0 ]; then
+		touch .usedocker
+		return 0
+	else
+		touch .dontusedocker
+		return 1
+	fi
+}
+
 if [[ $# -ne 1 ]]; then
 	print_error "Wrong number of arguments"
 	print_usage
@@ -144,10 +189,14 @@ if [ $1 = "clean" ]; then
 		something_cleaned=true
 	fi
 
-	docker ps -a -q -f status=exited | xargs docker rm
-	docker rmi patrykchodur:1.0
-	docker rmi debian:10
+	if using_docker; then
+		# removing docker
+		docker ps -a -q -f status=exited | xargs docker rm
+		docker rmi patrykchodur:1.0
+		docker rmi debian:10
+	fi
 
+	rm -f .usedocker .dontusedocker
 
 	if [ "$something_cleaned" = false ]; then
 		print_info "Nothing to clean"
@@ -165,9 +214,11 @@ if [ $1 = "run" ]; then
 		print_error "Already running inside docker"
 		exit -1
 	fi
-	print_info "Running docker"
-	docker build -t patrykchodur:1.0 -f ./PN--jadro-linux/Dockerfile .
-	docker run -it --rm=true patrykchodur:1.0
+	if using_docker; then
+		print_info "Running docker"
+		docker build -t patrykchodur:1.0 -f ./PN--jadro-linux/Dockerfile .
+		docker run -it --rm=true patrykchodur:1.0
+	fi
 	exit 0
 fi
 
@@ -214,7 +265,7 @@ if [ $1 = "solution" ]; then
 		exit -1
 	fi
 
-	if ! inside_docker; then
+	if ! inside_docker && using_docker; then
 		print_info "Running docker"
 		# niestety parser dockera to jest porażka i nie potrafi czytać ze strumieni
 		#sed '$ a\
