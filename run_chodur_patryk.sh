@@ -232,6 +232,8 @@ if [ $1 = "run" ]; then
 		print_info "Running docker"
 		docker build -t patrykchodur:1.0 -f ./PN--jadro-linux/Dockerfile .
 		docker run -it --rm=true patrykchodur:1.0
+	else
+		print_info "run subcommand does not do anything"
 	fi
 	exit 0
 fi
