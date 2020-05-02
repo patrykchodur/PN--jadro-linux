@@ -158,6 +158,14 @@ function using_docker {
 	fi
 }
 
+function using_docker_noprompt {
+	if [ -f .usedocker ]; then
+		return 0
+	else
+		return 1
+	fi
+}
+
 if [[ $# -ne 1 ]]; then
 	print_error "Wrong number of arguments"
 	print_usage
@@ -195,7 +203,7 @@ if [ $1 = "clean" ]; then
 		something_cleaned=true
 	fi
 
-	if using_docker; then
+	if using_docker_noprompt; then
 		# removing docker
 		docker ps -a -q -f status=exited | xargs docker rm
 		docker rmi patrykchodur:1.0
